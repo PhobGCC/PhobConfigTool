@@ -1,0 +1,10 @@
+# Temporary files
+*.bak
+# Build Files
+*.dol
+*.elf
+*.d
+*.o
+*.map
+# Scripts Related To Workflow
+scripts/
