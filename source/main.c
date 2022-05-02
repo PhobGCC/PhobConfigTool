@@ -53,6 +53,23 @@ void Initialise() {
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 }
 
+char *convert(uint8_t *a){
+  char* buffer2;
+  int i;
+
+  buffer2 = malloc(9);
+  if (!buffer2)
+    return NULL;
+
+  buffer2[8] = 0;
+  for (i = 0; i <= 7; i++)
+    buffer2[7 - i] = (((*a) >> i) & (0x01)) + '0';
+
+  puts(buffer2);
+
+  return buffer2;
+}
+
 /*
 * takes in an image and places it on the screen with a location to put it
 */
@@ -219,16 +236,35 @@ void trigger_setup() {
 	while(1) {
 
 		PAD_ScanPads();
+
 		u16 buttonsDown = PAD_ButtonsDown(0);
+		u16 buttonsHeld = PAD_ButtonsHeld(0);
+
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = 1;
 			break;
 		}
 
 		printf("\x1b[2;0H");
-		printf("Trigger Setup WIP");
+		int lTrigger = PAD_TriggerL(0);
+		printf("L Trigger Value: %d", lTrigger);
+
+		printf("\x1b[3;0H");
+		if(buttonsHeld & PAD_TRIGGER_L) {
+			printf("L Trigger Digital Active");
+		}
+
+		printf("\x1b[2;40H");
+		int rTrigger = PAD_TriggerR(0);
+		printf("R Trigger Value: %d", rTrigger);
+
+		printf("\x1b[3;40H");
+		if(buttonsHeld & PAD_TRIGGER_R) {
+			printf("R Trigger Digital Active");
+		}
 
 		VIDEO_WaitVSync();
+		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
 	}
 }
 
