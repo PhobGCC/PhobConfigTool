@@ -9,11 +9,12 @@
 
 //Control Flow Definitions
 #define MAIN_MENU 1
-#define CONTROLLER_TEST 2
-#define ANALOG_CALIBRATION 3
-#define CSTICK_CALIBRATION 4
-#define TRIGGER_SETUP 5
-#define EXIT_APP 6
+#define SHOW_SETTINGS 2
+#define CONTROLLER_TEST 3
+#define ANALOG_CALIBRATION 4
+#define CSTICK_CALIBRATION 5
+#define TRIGGER_SETUP 6
+#define EXIT_APP 7
 
 //Rendering Vars
 static u32 *xfb;
@@ -29,6 +30,13 @@ JPEGIMG phost;
 //Control Flow Vars
 int menu_pointer = 2;
 int current_screen = 1;
+
+//Controller Communication Vars
+int message_received = 0;
+int Ax = 0;
+int Ay = 0;
+int Cx = 0;
+int Cy = 0;
 
 
 /*
@@ -98,18 +106,21 @@ void display_menu (int men_val) {
 	printf("PhobGCC Configuration Tool");
 
 	printf("\x1b[12;35H");
-	printf("Controller Test");
+	printf("See Current Controller Settings");
 
 	printf("\x1b[13;35H");
-	printf("Analog Stick Calibration");
+	printf("Controller Test");
 
 	printf("\x1b[14;35H");
-	printf("C-Stick Calibration");
+	printf("Analog Stick Calibration");
 
 	printf("\x1b[15;35H");
-	printf("Trigger Setup");
+	printf("C-Stick Calibration");
 
 	printf("\x1b[16;35H");
+	printf("Trigger Setup");
+
+	printf("\x1b[17;35H");
 	printf("Exit");
 
 	if(men_val == 2) {
@@ -127,6 +138,9 @@ void display_menu (int men_val) {
 			printf("->");
 	} else if(men_val == 6) {
 			printf("\x1b[16;32H");
+			printf("->");
+	} else if(men_val == 7) {
+			printf("\x1b[17;32H");
 			printf("->");
 	}
 }
@@ -154,7 +168,7 @@ void main_menu () {
 		}
 
 		if(buttonsDown & PAD_BUTTON_DOWN) {
-			if(menu_pointer == 6){
+			if(menu_pointer == 7){
 			} else {
 				menu_pointer++;
 			}
@@ -167,6 +181,57 @@ void main_menu () {
 		display_menu(menu_pointer);
 		display_jpeg(phost, 60, 100);
 	}
+}
+
+void show_settings() {
+	while (1) {
+
+				PAD_ScanPads();
+				u16 buttonsHeld = PAD_ButtonsHeld(0);
+				u16 buttonsDown = PAD_ButtonsDown(0);
+
+				if(message_received == 1) {
+					printf("\x1b[2;0H");
+					printf("Communicating with PhobGCC");
+					usleep(500000); //sleep for half a second
+
+					Ax = PAD_StickX(0);
+					Ay = PAD_StickY(0);
+
+					Cx = PAD_SubStickX(0);
+					Cy = PAD_SubStickY(0);
+
+					message_received = 2;
+				} else if(message_received == 0) {
+					printf("\x1b[2;0H");
+					printf("Please Send Settings (LR+Start)");
+					if ((buttonsHeld & PAD_TRIGGER_L) && (buttonsHeld & PAD_TRIGGER_R) && (buttonsHeld & PAD_BUTTON_START)) {
+							message_received = 1;
+					}
+				} else if (message_received == 2) {
+
+					printf("\x1b[2;0H");
+					printf("X axis Delay Setting: %d", Ax);
+
+					printf("\x1b[3;0H");
+					printf("Y Axis Delay Setting: %d", Ay);
+
+					printf("\x1b[4;0H");
+					printf("X axis Snapback Setting: %d", Cx);
+
+					printf("\x1b[5;0H");
+					printf("Y axis Snapback Setting: %d", Cy);
+
+					if(buttonsDown & PAD_BUTTON_START) {
+						current_screen = 1;
+						message_received = 0;
+						break;
+					}
+
+				}
+				VIDEO_WaitVSync();
+				VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
+			}
 }
 
 /*
@@ -288,6 +353,8 @@ int main() {
 
 		if(current_screen == MAIN_MENU) {
 			main_menu();
+		} else if(current_screen == SHOW_SETTINGS) {
+			show_settings();
 		} else if(current_screen == CONTROLLER_TEST) {
 			controller_test();
 		} else if(current_screen == ANALOG_CALIBRATION) {
