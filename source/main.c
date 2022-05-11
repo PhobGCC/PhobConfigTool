@@ -6,6 +6,7 @@
 #include <gccore.h>
 #include <jpeg/jpgogc.h>
 #include <unistd.h>
+#include <math.h>
 
 //Control Flow Definitions
 #define MAIN_MENU 1
@@ -31,13 +32,44 @@ JPEGIMG phost;
 int menu_pointer = 2;
 int current_screen = 1;
 
+//Gamepad Vars
+u16 buttonsDown;
+u16 buttonsHeld;
+u16 buttonsUp;
+
+int rTrigger;
+int lTrigger;
+
 //Controller Communication Vars
 int message_received = 0;
-int Ax = 0;
-int Ay = 0;
-int Cx = 0;
-int Cy = 0;
+int xDelay = 0;
+int yDelay = 0;
+int xSnapback = 0;
+int ySnapback = 0;
 
+//Stick Display Vars
+int rawAx;
+int rawAy;
+int rawCx;
+int rawCy;
+
+float processedAx;
+float processedAy;
+float processedCx;
+float processedCy;
+
+float aVector;
+float cVector;
+
+int Ax;
+int Ay;
+int Cx;
+int Cy;
+
+float meleeAx;
+float meleeAy;
+float meleeCx;
+float meleeCy;
 
 /*
 * Initialize Function handles setting up the VT Terminal used for printing text
@@ -149,15 +181,9 @@ void display_menu (int men_val) {
 * handles main menu operation
 */
 void main_menu () {
-		while(1) {
-
-		PAD_ScanPads();
-
-		u16 buttonsDown = PAD_ButtonsDown(0);
 
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = menu_pointer;
-			break;
 		}
 
 		if(buttonsDown & PAD_BUTTON_UP) {
@@ -174,19 +200,20 @@ void main_menu () {
 			}
 		}
 
-		VIDEO_WaitVSync();
-
-		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
-
 		display_menu(menu_pointer);
 		display_jpeg(phost, 60, 100);
-	}
 }
 
 void show_settings() {
-	while (1) {
 
-				PAD_ScanPads();
+	if(buttonsDown & PAD_BUTTON_START) {
+		current_screen = 1;
+	}
+
+	printf("\x1b[2;0H");
+	printf("PhobGCC Communication WIP");
+
+			/*	PAD_ScanPads();
 				u16 buttonsHeld = PAD_ButtonsHeld(0);
 				u16 buttonsDown = PAD_ButtonsDown(0);
 
@@ -195,11 +222,11 @@ void show_settings() {
 					printf("Communicating with PhobGCC");
 					usleep(500000); //sleep for half a second
 
-					Ax = PAD_StickX(0);
-					Ay = PAD_StickY(0);
+					xDelay = PAD_StickX(0);
+					yDelay = PAD_StickY(0);
 
-					Cx = PAD_SubStickX(0);
-					Cy = PAD_SubStickY(0);
+					xSnapback = PAD_SubStickX(0);
+					ySnapback = PAD_SubStickY(0);
 
 					message_received = 2;
 				} else if(message_received == 0) {
@@ -211,16 +238,16 @@ void show_settings() {
 				} else if (message_received == 2) {
 
 					printf("\x1b[2;0H");
-					printf("X axis Delay Setting: %d", Ax);
+					printf("X axis Delay Setting: %d", xDelay);
 
 					printf("\x1b[3;0H");
-					printf("Y Axis Delay Setting: %d", Ay);
+					printf("Y Axis Delay Setting: %d", yDelay);
 
 					printf("\x1b[4;0H");
-					printf("X axis Snapback Setting: %d", Cx);
+					printf("X axis Snapback Setting: %d", xSnapback);
 
 					printf("\x1b[5;0H");
-					printf("Y axis Snapback Setting: %d", Cy);
+					printf("Y axis Snapback Setting: %d", ySnapback);
 
 					if(buttonsDown & PAD_BUTTON_START) {
 						current_screen = 1;
@@ -230,88 +257,112 @@ void show_settings() {
 
 				}
 				VIDEO_WaitVSync();
-				VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
-			}
+				VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);*/
 }
 
 /*
 * handles controller test operation
 */
 void controller_test() {
-	while(1) {
-
-		PAD_ScanPads();
-		u16 buttonsDown = PAD_ButtonsDown(0);
-		if(buttonsDown & PAD_BUTTON_START) {
-			current_screen = 1;
-			break;
-		}
-
-		printf("\x1b[2;0H");
-		printf("Controller Test WIP");
-
-		VIDEO_WaitVSync();
+	if(buttonsDown & PAD_BUTTON_START) {
+		current_screen = 1;
 	}
+
+	printf("\x1b[2;0H");
+	printf("Controller Test WIP");
 }
 
+int returnIntCast(float val) {
+	if(val > 0) {
+		return ((int) floor(val));
+	} else if(val < 0) {
+		return ((int) ceil(val));
+	} else {
+		return 0;
+	}
+}
 /*
 * handles analog calibration operation
 */
 void analog_calib() {
-	while(1) {
-
-		PAD_ScanPads();
-		u16 buttonsDown = PAD_ButtonsDown(0);
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = 1;
-			break;
 		}
 
+		processedAx = rawAx;
+		processedAy = rawAy;
+		processedCx = rawCx;
+		processedCy = rawCy;
+
+		aVector = sqrt((processedAx*processedAx) + (processedAy*processedAy));
+		cVector = sqrt((processedCx*processedCx) + (processedCy*processedCy));
+
+		if (aVector > 80) {
+			processedAx = (processedAx / aVector) * 80;
+			processedAy = (processedAy / aVector) * 80;
+		}
+
+		if(cVector > 80) {
+			processedCx = (processedCx / cVector) * 80;
+			processedCy = (processedCy / cVector) * 80;
+		}
+
+		Ax = returnIntCast(processedAx);
+		Ay = returnIntCast(processedAy);
+		Cx = returnIntCast(processedCx);
+		Cy = returnIntCast(processedCy);
+
+		meleeAx = ((float) (Ax)) * 0.0125;
+		meleeAy = ((float) (Ay)) * 0.0125;
+		meleeCx = ((float) (Cx)) * 0.0125;
+		meleeCy = ((float) (Cy)) * 0.0125;
+
 		printf("\x1b[2;0H");
-		printf("Analog Stick Calibration WIP");
+		printf("Raw Analog Stick X Value: %d", rawAx);
 
-		VIDEO_WaitVSync();
-	}
+		printf("\x1b[3;0H");
+		printf("Raw Analog Stick Y Value: %d", rawAy);
+
+		printf("\x1b[4;0H");
+		printf("Analog Stick X Value: %f", meleeAx);
+
+		printf("\x1b[5;0H");
+		printf("Analog Stick Y Value: %f", meleeAy);
+
+		printf("\x1b[2;40H");
+		printf("Raw C-Stick X Value: %d", rawCx);
+
+		printf("\x1b[3;40H");
+		printf("Raw C-Stick Y Value: %d", rawCy);
+
+		printf("\x1b[4;40H");
+		printf("C-Stick X Value: %f", meleeCx);
+
+		printf("\x1b[5;40H");
+		printf("C-Stick Y Value: %f", meleeCy);
 }
-
 /*
 * handles c-stick calibration operation
 */
 void cstick_calib() {
-	while(1) {
-
-		PAD_ScanPads();
-		u16 buttonsDown = PAD_ButtonsDown(0);
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = 1;
-			break;
 		}
 
 		printf("\x1b[2;0H");
 		printf("C-stick Calibration WIP");
-
-		VIDEO_WaitVSync();
-	}
 }
 
 /*
 * handles trigger setup operation
 */
 void trigger_setup() {
-	while(1) {
-
-		PAD_ScanPads();
-
-		u16 buttonsDown = PAD_ButtonsDown(0);
-		u16 buttonsHeld = PAD_ButtonsHeld(0);
 
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = 1;
-			break;
 		}
 
 		printf("\x1b[2;0H");
-		int lTrigger = PAD_TriggerL(0);
 		printf("L Trigger Value: %d", lTrigger);
 
 		printf("\x1b[3;0H");
@@ -320,17 +371,12 @@ void trigger_setup() {
 		}
 
 		printf("\x1b[2;40H");
-		int rTrigger = PAD_TriggerR(0);
 		printf("R Trigger Value: %d", rTrigger);
 
 		printf("\x1b[3;40H");
 		if(buttonsHeld & PAD_TRIGGER_R) {
 			printf("R Trigger Digital Active");
 		}
-
-		VIDEO_WaitVSync();
-		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
-	}
 }
 
 
@@ -348,8 +394,18 @@ int main() {
 
 	while (1) {
 
-		VIDEO_WaitVSync();
-		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
+		PAD_ScanPads();
+		buttonsDown = PAD_ButtonsDown(0);
+		buttonsHeld = PAD_ButtonsHeld(0);
+		buttonsUp = PAD_ButtonsUp(0);
+
+		rawAx = PAD_StickX(0);
+		rawAy = PAD_StickY(0);
+		rawCx = PAD_SubStickX(0);
+		rawCy = PAD_SubStickY(0);
+
+		lTrigger = PAD_TriggerL(0);
+		rTrigger = PAD_TriggerR(0);
 
 		if(current_screen == MAIN_MENU) {
 			main_menu();
@@ -366,6 +422,9 @@ int main() {
 		} else if(current_screen == EXIT_APP) {
 			exit(0);
 		}
+
+		VIDEO_WaitVSync();
+		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
 
 	}
 
