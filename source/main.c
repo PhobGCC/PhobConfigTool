@@ -66,10 +66,10 @@ int Ay;
 int Cx;
 int Cy;
 
-float meleeAx;
-float meleeAy;
-float meleeCx;
-float meleeCy;
+int meleeAx;
+int meleeAy;
+int meleeCx;
+int meleeCy;
 
 /*
 * Initialize Function handles setting up the VT Terminal used for printing text
@@ -287,7 +287,8 @@ int returnIntCast(float val) {
 void analog_calib() {
 		if(buttonsDown & PAD_BUTTON_START) {
 			current_screen = 1;
-		}
+			menu_pointer = 2;
+		} else {
 
 		processedAx = rawAx;
 		processedAy = rawAy;
@@ -312,10 +313,10 @@ void analog_calib() {
 		Cx = returnIntCast(processedCx);
 		Cy = returnIntCast(processedCy);
 
-		meleeAx = ((float) (Ax)) * 0.0125;
-		meleeAy = ((float) (Ay)) * 0.0125;
-		meleeCx = ((float) (Cx)) * 0.0125;
-		meleeCy = ((float) (Cy)) * 0.0125;
+		meleeAx = (int) ((((float) (Ax)) * 0.0125) * 10000);
+		meleeAy = (int) ((((float) (Ay)) * 0.0125) * 10000);
+		meleeCx = (int) ((((float) (Cx)) * 0.0125) * 10000);
+		meleeCy = (int) ((((float) (Cy)) * 0.0125) * 10000);
 
 		printf("\x1b[2;0H");
 		printf("Raw Analog Stick X Value: %d", rawAx);
@@ -324,10 +325,36 @@ void analog_calib() {
 		printf("Raw Analog Stick Y Value: %d", rawAy);
 
 		printf("\x1b[4;0H");
-		printf("Analog Stick X Value: %f", meleeAx);
+		if(rawAx < 0) {
+			meleeAx = abs(meleeAx);
+			if(meleeAx == 10000) {
+				printf("Analog Stick X Value: -1.0000");
+			} else {
+				printf("Analog Stick X Value: -0.%04d", meleeAx);
+			}
+		} else {
+			if(meleeAx == 10000) {
+				printf("Analog Stick X Value: 1.0000");
+			} else {
+				printf("Analog Stick X Value: 0.%04d", meleeAx);
+			}
+		}
 
 		printf("\x1b[5;0H");
-		printf("Analog Stick Y Value: %f", meleeAy);
+		if(rawAy < 0) {
+			meleeAy = abs(meleeAy);
+			if(meleeAy == 10000) {
+				printf("Analog Stick Y Value: -1.0000");
+			} else {
+				printf("Analog Stick Y Value: -0.%04d", meleeAy);
+			}
+		} else {
+			if(meleeAy == 10000) {
+				printf("Analog Stick Y Value: 1.0000");
+			} else {
+				printf("Analog Stick Y Value: 0.%04d", meleeAy);
+			}
+		}
 
 		printf("\x1b[2;40H");
 		printf("Raw C-Stick X Value: %d", rawCx);
@@ -336,10 +363,38 @@ void analog_calib() {
 		printf("Raw C-Stick Y Value: %d", rawCy);
 
 		printf("\x1b[4;40H");
-		printf("C-Stick X Value: %f", meleeCx);
+		if(rawCx < 0) {
+			meleeCx = abs(meleeCx);
+			if(meleeCx == 10000) {
+				printf("C-Stick X Value: -1.0000");
+			} else {
+				printf("C-Stick X Value: -0.%04d", meleeCx);
+			}
+		} else {
+			if(meleeCx == 10000) {
+				printf("C-Stick X Value: 1.0000");
+			} else {
+				printf("C-Stick X Value: 0.%04d", meleeCx);
+			}
+		}
+
 
 		printf("\x1b[5;40H");
-		printf("C-Stick Y Value: %f", meleeCy);
+		if(rawCy < 0) {
+			meleeCy = abs(meleeCy);
+			if(meleeCy == 10000) {
+				printf("C-Stick Y Value: -1.0000");
+			} else {
+				printf("C-Stick Y Value: -0.%04d", meleeCy);
+			}
+		} else {
+			if(meleeCy == 10000) {
+				printf("C-Stick Y Value: 1.0000");
+			} else {
+				printf("C-Stick Y Value: 0.%04d", meleeCy);
+			}
+		}
+	}
 }
 /*
 * handles c-stick calibration operation
@@ -427,7 +482,5 @@ int main() {
 		VIDEO_ClearFrameBuffer (rmode, xfb, COLOR_BLACK);
 
 	}
-
 	return 0;
-
 }
