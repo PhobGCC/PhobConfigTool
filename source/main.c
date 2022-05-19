@@ -127,6 +127,41 @@ void display_jpeg(JPEGIMG jpeg, int x, int y) {
 	free(jpeg.outbuffer);
 
 }
+/*
+* takes in values to draw a horizontal line of a given color
+*/
+void DrawHLine (int x1, int x2, int y, int color) {
+    int i;
+    y = 320 * y;
+    x1 >>= 1;
+    x2 >>= 1;
+    for (i = x1; i <= x2; i++) {
+        u32 *tmpfb = xfb;
+        tmpfb[y+i] = color;
+    }
+}
+
+/*
+* takes in values to draw a vertical line of a given color
+*/
+void DrawVLine (int x, int y1, int y2, int color) {
+    int i;
+    x >>= 1;
+    for (i = y1; i <= y2; i++) {
+        u32 *tmpfb = xfb;
+        tmpfb[x + (640 * i) / 2] = color;
+    }
+}
+
+/*
+* takes in values to draw a box of a given color
+*/
+void DrawBox (int x1, int y1, int x2, int y2, int color) {
+    DrawHLine (x1, x2, y1, color);
+    DrawHLine (x1, x2, y2, color);
+    DrawVLine (x1, y1, y2, color);
+    DrawVLine (x2, y1, y2, color);
+}
 
 /*
 * handles rendering the menu options and the arrow next to them using VT
@@ -394,6 +429,8 @@ void analog_calib() {
 				printf("C-Stick Y Value: 0.%04d", meleeCy);
 			}
 		}
+
+		DrawBox (300 + rawAx, 250 + -rawAy, 301 + rawAx, 251 + -rawAy, COLOR_WHITE);
 	}
 }
 /*
