@@ -8,3 +8,5 @@
 *.map
 # Scripts Related To Workflow
 scripts/
+# VSCode folder
+.vscode/
