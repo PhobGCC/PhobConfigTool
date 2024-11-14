@@ -1,3 +1,7 @@
+# Warning
+
+This tool never existed in a usable state. It doesn't actually function.
+
 # PhobGCC Configuration Tool
 Wii homebrew tool used for configuring the PhobGCC.
 <https://github.com/Phobos132/PhobGCC>
